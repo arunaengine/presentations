@@ -2,11 +2,11 @@
 
 [![CC BY-ND 4.0][cc-by-nd-shield]][cc-by-nd]
 
-Repository for the documentation of the BMBF funded project FAIR Dataspaces.
+This repository contains additional sources, examples and explanations for presentations given in the Aruna context.
 
-A rendered version of the wiki can be found here: 
+A rendered version of this repo can be found here: 
 
-https://fair-ds4nfdi.github.io/wiki/
+https://pres.aruna-storage.org
 
 ## Deploy Locally with Docker for Testing
 
