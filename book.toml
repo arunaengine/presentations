@@ -2,8 +2,8 @@
 authors = ["Sebastian Beyvers", "Jannis Hochmuth", "Lukas Brehm", "Frank Förster", "Maria Hansen"]
 language = "en"
 multilingual = false
-src = "src"
+src = "."
 title = "Presentations by the Aruna project"
-
+build-dir = "book"
 
 [preprocessor.alerts]
