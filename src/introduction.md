@@ -2,6 +2,8 @@
 <img width=250 src="assets/aruna_white_font.png" alt="The Rust logo">
 </p>
 
+# Introduction
+
 Welcome to our repo with additional information for our presentations.
 This is intended to give a blog-like deeper inside on the presented topics and additional examples, contexts and more.
 
