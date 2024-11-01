@@ -6,4 +6,10 @@ src = "."
 title = "Presentations by the Aruna project"
 build-dir = "book"
 
+[output.html]
+smart-punctuation = true
+git-repository-url = "https://github.com/ArunaStorage/presentations/tree/main"
+edit-url-template = "https://github.com/ArunaStorage/presentations/edit/main/{path}"
+
+
 [preprocessor.alerts]
