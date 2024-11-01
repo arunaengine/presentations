@@ -6,7 +6,7 @@ This repository contains additional sources, examples and explanations for prese
 
 A rendered version of this repo can be found here: 
 
-https://pres.aruna-storage.org
+https://info.aruna-storage.org
 
 ## Deploy Locally with Docker for Testing
 
