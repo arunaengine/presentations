@@ -95,6 +95,68 @@ The key to managing these various mortality factors lies in a comprehensive conf
 
 By understanding and accounting for these various termination scenarios, organizations can significantly improve the reliability of their ultra-long running workloads on Kubernetes. The goal isn't to eliminate pod mortality entirely – that's neither possible nor desirable in a distributed system. Instead, the focus should be on making pod terminations predictable, manageable, and minimally disruptive to critical computations.
 
+#### A Practical Example
+Our Workload Profile: Computational Biology at Scale
+Our real-world experience comes from managing computational biology workflows, specifically focusing on DNA and RNA sequence analysis. These workloads present unique challenges due to their complex resource utilization patterns and extended runtimes. A single metagenomic assembly workflow, for instance, can span weeks or even months, utilizing over 100 CPU cores and consuming terabytes of RAM during peak operations.
+What makes these workloads particularly challenging is their variable resource consumption pattern. Rather than maintaining steady resource usage, they typically alternate between different computational phases:
+
+- CPU-intensive periods for sequence alignment and processing
+- Memory-intensive phases during assembly graph construction
+- I/O-heavy stages during data ingestion and result writing
+- Periods of relatively low resource utilization during intermediate steps
+
+This variability creates an interesting challenge: how do we efficiently allocate resources while ensuring job reliability?
+
+##### Optimizing Resource Configuration
+
+Through extensive monitoring and analysis, we've developed a resource management strategy that balances efficiency with reliability. Our approach is based on several key principles:
+
+##### Resource Requests:
+
+We set baseline resource requests using carefully measured average utilization patterns. This approach ensures our scheduler can make informed decisions about pod placement while maintaining cluster efficiency. For memory requests, we've found that using the average utilization as a baseline provides good scheduling efficiency.
+
+##### Memory Overprovisioning:
+
+For our ultra-long running workloads, we intentionally overprovision memory requests by approximately 50% above the average usage. This buffer serves multiple purposes:
+
+- Provides headroom for unexpected memory spikes
+- Reduces the likelihood of eviction during node memory pressure
+- Improves scheduling decisions by accurately reflecting potential memory needs
+
+##### Strategic Omission of Limits:
+We've made the deliberate decision to run our long-running workloads without resource limits, based on several observations:
+
+- CPU limits can significantly impact processing speed and overall runtime
+- Memory limits, while theoretically useful, can be counterproductive for workloads with variable memory patterns
+- The nature of our applications means they may occasionally need to utilize nearly all available node resources
+
+For shorter-running jobs in our workflow, we maintain the same philosophy of avoiding cpu limits, as the potential benefits of limits don't outweigh the operational complexity and potential performance impacts in our use case, but we do enforce memory limits. In addition to that we intentionally choose lower memory requests. Remember when evicting for MemoryPressure the pods exceeding the request have a higher chance to be evicted.
+
+This configuration approach has proven effective in maximizing our workflow success rate while maintaining efficient resource utilization across our cluster. The key has been finding the right balance between providing enough resources for reliability while not overprovisioning to the point of waste.
+
+
+### TODO:
+
+- Node affinity
+- Pod priority
+- Argo workflows ?
+- Exotic strategies:
+- - CRIU
+- - VMs / Kata containers ?
+
+<!-- #### A practical example
+
+##### Our workload(s)
+In our setup we are running a diverse set of workflows from computational biology. These include primarily the analysis and processing of DNA and RNA sequences from various sources. Most of these workflows consist of a combination of long-running steps and (sometimes in parallel) shorter running steps in between. Our goal is to make the most efficient use of the available hardware while maximizing the success rate of our long running workloads. Some of these applications, large metagenomic assemblies for example can take weeks or months to complete on high performance hardware using 100+ CPU cores and up-to terabytes of RAM.
+
+It is important to note that these assembly jobs do not always use the full resources and often have long spans that take either a lot of CPU resources or Memory. 
+
+##### Workload configuration: Request and Limits
+
+Through extensive measurement we have a quite good estimate of the average and minimun / maximum resource usage of small and large jobs. As a baseline we configure all workloads to use the average CPU / RAM as requests, due to the memory spikes we do give our ultra-long-running pods around 1.5x memory above average to decrease the likelihood of eviction when MemoryPressure occurs. 
+
+The long running workloads have no resource limits. CPU limits do have a significant runtime impact. Memory limits while in theory possible we do want to give these jobs the option to consume almost all memory of the node. All shorter / smaller jobs do not have limits.  -->
+
 <!-- 
 Before we dive into specific strategies let us first explore the knobs and dials someone can turn to modify the default pod behavior. Five reasons exist why a pod in your kubernetes environment can get killed: Preemption, Node pressure eviction, API-initiated Eviction, Exceeding resource limits and external factors (hardware failures, external sigkill signals etc.).
 
