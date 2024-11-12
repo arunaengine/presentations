@@ -6,7 +6,7 @@
 
 Welcome to our presentation repo, where you'll find extra info on the topics we've presented. This is meant to give you a more in-depth look at the material, with additional examples, contexts, and more.
 
-If you are looking for technical documentation for aruna itself please click [here](https://arunastorage.github.io/documentation/v2.0.x/).
+If you are looking for technical documentation for aruna itself please click [here](https://docs.aruna-engine.org/latest/).
 
 
 > [!NOTE]
@@ -14,7 +14,7 @@ If you are looking for technical documentation for aruna itself please click [he
 
 A rendered version of this repo can be found here: 
 
-[https://info.aruna-storage.org](https://info.aruna-storage.org)
+[https://info.aruna-engine.org](https://info.aruna-engine.org)
 
 ## Developer info
 
@@ -29,7 +29,7 @@ A rendered version of this repo can be found here:
 
 The contribution to the wiki is done via pull requests. The book is rendered as markdown via the `src` directory.
 
-[SUMMARY.md](./src/SUMMARY.md) contains the table of content for the book.
+[SUMMARY.md](./SUMMARY.md) contains the table of content for the book.
 
 ### License
 
