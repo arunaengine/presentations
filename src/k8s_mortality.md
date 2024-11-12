@@ -2,6 +2,19 @@
 
 ## Poster: Accepting mortality: Strategies for ultra-long running stateful workloads in K8s
 
+### Table of Contents
+
+1. [Introduction](#introduction)
+2. [What Makes a Workload "Ultra-Long Running"?](#what-makes-a-workload-ultra-long-running)
+3. [Understanding Pod Mortality: The Inevitable and the Preventable](#understanding-pod-mortality-the-inevitable-and-the-preventable)
+4. [Selecting the Right Tool](#selecting-the-right-tool)
+5. [Strategies for Kubernetes Configuration](#strategies-for-kubernetes-configuration)
+6. [A Practical Example](#a-practical-example)
+7. [Container Necromancy: CRIU to the Rescue!](#container-necromancy-criu-to-the-rescue)
+8. [Summary](#summary)
+
+### Introduction
+
 ["Pods are mortal"](https://kubernetes.io/docs/tutorials/kubernetes-basics/expose/expose-intro/) - this frequently cited credo from the Kubernetes documentation has long been used to argue against running stateful workloads on Kubernetes. The ephemeral nature of pods, while perfect for resilient microservices, was supposedly unsuitable for workloads that required persistence and long-term stability.
 
 But times have changed. Modern Kubernetes has evolved far beyond its initial focus on stateless applications. Today, running databases and other stateful workloads on K8s is not just possible – [it's becoming the norm](https://dok.community/data-on-kubernetes-2022-report/). Through redundant setups and reliable persistent volumes, the "mortality" of pods has transformed from a limitation into a manageable design consideration.
@@ -21,30 +34,45 @@ This highlights that the classification of ultra-long running workloads depends 
 
 ### Understanding Pod Mortality: The Inevitable and the Preventable
 
-With a clear understanding of ultra-long running workloads, we need to examine why pods die in the first place. Pod failures fall into two distinct categories: unavoidable and avoidable. Understanding this distinction is crucial for developing effective strategies to enhance reliability for these critical workloads.
-
-#### Unavoidable Failures: The Forces of Nature
-Some pod failures are simply beyond our control – they're an inherent part of running distributed systems at scale. These unavoidable failures include:
-
-- Hardware failures: From disk failures to memory errors
-- Infrastructure maintenance: Required system updates or hardware replacements
-- Network partitions: Temporary or extended connectivity issues
-- Power-related incidents: From brief outages to complete data center failures
-- System resource exhaustion: Host-level issues affecting all containers
-
-While we can't prevent these failures, we can prepare for them. The key is not to fight their inevitability but to design systems that can gracefully handle such disruptions. This is particularly crucial for ultra-long running workloads, where each failure can mean days or weeks of lost computation.
+With a clear understanding of ultra-long running workloads, we need to examine why pods die in the first place. Pod failures fall into two distinct categories: avoidable and unavoidable. Understanding this distinction is crucial for developing effective strategies to enhance reliability for these critical workloads.
 
 #### Avoidable Failures: The Human Factor
 
 The larger category – and the one where we have the most control – involves avoidable failures. These stem from configuration issues, design oversights, or misalignment between tools and requirements. Common sources include:
 
-- Misconfigured resource requests and limits
+- Preemption: Higher-priority pods can preempt lower-priority ones, leading to their termination.
+- API-Initiated Eviction: Kubernetes may evict pods based on API decisions, such as during scaling events or policy enforcement.
+- Misconfigured Resource Requests and Limits: Setting inappropriate resource allocations can lead to pod instability or inefficient resource usage.
+- Node Pressure: Resource exhaustion at the node level, such as CPU or memory shortages, can force the eviction of pods. Although this can become an unavoidable failure, it is often preventable through proper resource management.
+
+Overall a proper planning, configuration, and implementation can prevent these failures. For ultra-long running workloads, addressing these avoidable failures can dramatically improve reliability and reduce the operational overhead of managing these critical computations.
+
+<!-- - Misconfigured resource requests and limits
 - Inappropriate pod disruption budgets
 - Suboptimal node affinity rules
 - Inadequate liveness and readiness probe configurations
-- Poor handling of application state and checkpoints
+- Poor handling of application state and checkpoints -->
 
-The good news is that these failures can be prevented through proper planning, configuration, and implementation. For ultra-long running workloads, addressing these avoidable failures can dramatically improve reliability and reduce the operational overhead of managing these critical computations.
+<!-- The good news is that these failures can be prevented through proper planning, configuration, and implementation. For ultra-long running workloads, addressing these avoidable failures can dramatically improve reliability and reduce the operational overhead of managing these critical computations. -->
+
+#### Unavoidable Failures: The Forces of Nature
+
+As already stated, unavoidable situations where a node faces critical resource pressure, leading to the eviction of pods, can happen.
+
+But some pod failures are simply beyond our control – they're an inherent part of running distributed systems at scale. These failures include:
+
+- Hardware Failures: From disk failures to memory errors, hardware issues can lead to pod termination.
+- Infrastructure Maintenance: Necessary system updates or hardware replacements can lead to temporary pod disruptions.
+- Network Partitions: Temporary or extended connectivity issues can isolate pods, leading to communication failures.
+- Power-Related Incidents: From brief outages to complete data center failures, power issues can abruptly terminate pod operations.
+
+<!-- - Hardware failures: From disk failures to memory errors
+- Infrastructure maintenance: Required system updates or hardware replacements
+- Network partitions: Temporary or extended connectivity issues
+- Power-related incidents: From brief outages to complete data center failures
+- System resource exhaustion: Host-level issues affecting all containers -->
+
+While we can't prevent these failures, we can prepare for them. The key is not to fight their inevitability but to design systems that can gracefully handle such disruptions. This is particularly crucial for ultra-long running workloads, where each failure can mean days or weeks of lost computation.
 
 ### Selecting the Right Tool
 
@@ -95,44 +123,41 @@ The key to managing these various mortality factors lies in a comprehensive conf
 
 By understanding and accounting for these various termination scenarios, organizations can significantly improve the reliability of their ultra-long running workloads on Kubernetes. The goal isn't to eliminate pod mortality entirely – that's neither possible nor desirable in a distributed system. Instead, the focus should be on making pod terminations predictable, manageable, and minimally disruptive to critical computations.
 
-#### A Practical Example
-Our Workload Profile: Computational Biology at Scale
-Our real-world experience comes from managing computational biology workflows, specifically focusing on DNA and RNA sequence analysis. These workloads present unique challenges due to their complex resource utilization patterns and extended runtimes. A single metagenomic assembly workflow, for instance, can span weeks or even months, utilizing over 100 CPU cores and consuming terabytes of RAM during peak operations.
-What makes these workloads particularly challenging is their variable resource consumption pattern. Rather than maintaining steady resource usage, they typically alternate between different computational phases:
+### A practical example
 
-- CPU-intensive periods for sequence alignment and processing
-- Memory-intensive phases during assembly graph construction
-- I/O-heavy stages during data ingestion and result writing
-- Periods of relatively low resource utilization during intermediate steps
+#### Our workload(s)
+In our setup we are running a diverse set of workflows from computational biology. These include primarily the analysis and processing of DNA and RNA sequences from various sources. Most of these workflows consist of a combination of long-running steps and (sometimes in parallel) shorter running steps in between. Our goal is to make the most efficient use of the available hardware while maximizing the success rate of our long running workloads. Some of these applications, large metagenomic assemblies for example can take weeks or months to complete on high performance hardware using 100+ CPU cores and up-to terabytes of RAM.
 
-This variability creates an interesting challenge: how do we efficiently allocate resources while ensuring job reliability?
+It is important to note that these assembly jobs do not always use the full resources and often have long spans that take either a lot of CPU resources or Memory.
 
-##### Optimizing Resource Configuration
+#### Workload configuration: Request and Limits
 
-Through extensive monitoring and analysis, we've developed a resource management strategy that balances efficiency with reliability. Our approach is based on several key principles:
+Through extensive measurement we have a quite good estimate of the average and minimum / maximum resource usage of small and large jobs. As a baseline we configure all workloads to use the average CPU / RAM as requests, due to the memory spikes we do give our ultra-long-running pods around 1.5x memory above average to decrease the likelihood of eviction when MemoryPressure occurs.
 
-##### Resource Requests:
+The long-running workloads have no resource limits. CPU limits do have a significant runtime impact. Memory limits while in theory possible we do want to give these jobs the option to consume almost all memory of the node. All shorter / smaller jobs do not have limits.
 
-We set baseline resource requests using carefully measured average utilization patterns. This approach ensures our scheduler can make informed decisions about pod placement while maintaining cluster efficiency. For memory requests, we've found that using the average utilization as a baseline provides good scheduling efficiency.
+Before we dive into specific strategies let us first explore the knobs and dials someone can turn to modify the default pod behavior. Five reasons exist why a pod in your kubernetes environment can get killed: Preemption, Node pressure eviction, API-initiated Eviction, Exceeding resource limits and external factors (hardware failures, external sigkill signals etc.).
 
-##### Memory Overprovisioning:
+Preemption is the selective eviction of pods by the kubernetes scheduler to make room for pods with a higher priority, thus a very low hanging fruit is assigning your long running jobs a high priority. This can be done via priority classes.
 
-For our ultra-long running workloads, we intentionally overprovision memory requests by approximately 50% above the average usage. This buffer serves multiple purposes:
+Node pressure eviction occurs when kubelet detects some resource exhaustion on the hardware level, these eviction signals can be memory (MemoryPressure), file system related (DiskPressure) or pid related (PIDPressure). It is important to note that kubelet does not respect your configured PodDisruptionBudget and will kill your pod to remove the exhaustion state.
 
-- Provides headroom for unexpected memory spikes
-- Reduces the likelihood of eviction during node memory pressure
-- Improves scheduling decisions by accurately reflecting potential memory needs
+Pod selection at eviction: The pods that exceed their resource requests are evicted first, afterwards the pods are evicted sorted by pod priority, lastly by total resource usage relative to requests.
 
-##### Strategic Omission of Limits:
-We've made the deliberate decision to run our long-running workloads without resource limits, based on several observations:
+The third reason for mortality is api-initiated eviction. Someone initiated the eviction, these can effectively be removed via pod disruption budgets.
 
-- CPU limits can significantly impact processing speed and overall runtime
-- Memory limits, while theoretically useful, can be counterproductive for workloads with variable memory patterns
-- The nature of our applications means they may occasionally need to utilize nearly all available node resources
+The fourth reason is exceeding the configured memory limits. If a pod exceeds its memory limits it will get killed.
 
-For shorter-running jobs in our workflow, we maintain the same philosophy of avoiding cpu limits, as the potential benefits of limits don't outweigh the operational complexity and potential performance impacts in our use case, but we do enforce memory limits. In addition to that we intentionally choose lower memory requests. Remember when evicting for MemoryPressure the pods exceeding the request have a higher chance to be evicted.
+The last reason are hardware failures, as said in the previous sections you cannot effectively guarantee that they will not occur.
 
-This configuration approach has proven effective in maximizing our workflow success rate while maintaining efficient resource utilization across our cluster. The key has been finding the right balance between providing enough resources for reliability while not overprovisioning to the point of waste.
+Before addressing more technical topics how we can configure a kubernetes cluster to be as reliable as possible let me first talk about an obvious yet sometimes unexpected topic: Choosing the correct tool. For most tasks multiple options exist, all with their specific benefit and drawbacks. When a decision must be made between these options you can factor in some important characteristics for being better suited for a long running environment.
+
+1. Choose a tool with built-in checkpoints:
+   Built-in checkpointing and persistence to disk can make it way easier to recover from an unavoidable failure. While there are strategies to make programs without built-in checkpoints checkpointable (more on that later), it should only be treated as last resort and not the preferred way to make checkpoint of your program.
+
+2. Choose a tool with lower runtime. Sounds obvious but sometimes there are other factors that play into role here like the precision of the results etc. Always ask yourself: Is it really needed to have the highest precision ? Or does a more broader workflow with a little bit less precision but a drastically decreased runtime also work ?
+
+3. Prefer tools that use less RAM and or have a predictable RAM allocation. One of the hardest things to manage for ultra-long-running workloads is RAM. Especially if the RAM has some high spikes during the runtime it gets very frustrating and sometime not manageable in a cost and time effective way because crazy overprovisioning would be needed to cope with the RAM requirements. The fact is: RAM cannot be shared, so it is crucial to think about this in your considerations. The overall guideline should be: The less RAM usage and the more consistent the RAM usage the better.
 
 
 ### TODO:
@@ -144,44 +169,13 @@ This configuration approach has proven effective in maximizing our workflow succ
 - - CRIU
 - - VMs / Kata containers ?
 
-<!-- #### A practical example
 
-##### Our workload(s)
-In our setup we are running a diverse set of workflows from computational biology. These include primarily the analysis and processing of DNA and RNA sequences from various sources. Most of these workflows consist of a combination of long-running steps and (sometimes in parallel) shorter running steps in between. Our goal is to make the most efficient use of the available hardware while maximizing the success rate of our long running workloads. Some of these applications, large metagenomic assemblies for example can take weeks or months to complete on high performance hardware using 100+ CPU cores and up-to terabytes of RAM.
+### Container Necromancy: CRIU to the Rescue
 
-It is important to note that these assembly jobs do not always use the full resources and often have long spans that take either a lot of CPU resources or Memory. 
+In the world of containerization, one of the trickiest tasks is dealing with ultra-long-running workloads that need to be paused, moved, or restored without losing state. Enter CRIU—Checkpoint/Restore in Userspace—a powerful tool that lets us "freeze" running processes, capturing their state (including memory and open file descriptors) and storing it on disk. Later, this state can be used to "resurrect" the process, restoring it to exactly where it left off. This technique can be especially useful when dealing with stateful workloads or when migrating processes between machines without interruption.
 
-##### Workload configuration: Request and Limits
+To leverage CRIU effectively, you’ll need a custom container setup with CRIU support (let’s call it crik), which wraps your workload and facilitates checkpointing and restoration. The process starts by checkpointing: CRIU takes a snapshot of the process, recording crucial details like its memory state, open file descriptors, and other critical attributes to persistent storage. When it's time to restore, CRIU uses these saved snapshots to rebuild the process state, including the file descriptors and other essentials, allowing the application to resume as if nothing happened.
 
-Through extensive measurement we have a quite good estimate of the average and minimun / maximum resource usage of small and large jobs. As a baseline we configure all workloads to use the average CPU / RAM as requests, due to the memory spikes we do give our ultra-long-running pods around 1.5x memory above average to decrease the likelihood of eviction when MemoryPressure occurs. 
+However, the process remains manual and comes with some significant limitations when using current runtime support in CRI-O or containerd 2.0. One of the biggest challenges is that there is no standardized restore API, making this approach more complex to integrate seamlessly. Key technical hurdles include PID and TTY restoration, as well as dealing with any side effects from processes that were running at checkpoint time. For these reasons, CRIU is best used as a last resort when other native checkpointing options are unavailable.
 
-The long running workloads have no resource limits. CPU limits do have a significant runtime impact. Memory limits while in theory possible we do want to give these jobs the option to consume almost all memory of the node. All shorter / smaller jobs do not have limits.  -->
-
-<!-- 
-Before we dive into specific strategies let us first explore the knobs and dials someone can turn to modify the default pod behavior. Five reasons exist why a pod in your kubernetes environment can get killed: Preemption, Node pressure eviction, API-initiated Eviction, Exceeding resource limits and external factors (hardware failures, external sigkill signals etc.).
-
-Preemption is the selective eviction of pods by the kubernetes scheduler to make room for pods with a higher priority, thus a very low hanging fruit is assigning your long running jobs a high priority. This can be done via priority classes.
-
-Node pressure eviction occurs when kubelet detects some resource exhaustion on the hardware level, these eviction signals can be memory (MemoryPressure), file system related (DiskPressure) or pid related (PIDPressure). It is important to note that kubelet does not respect your configured PodDisruptionBudget and will kill your pod to remove the exhaustion state.
-
-Pod selection at eviction: The pods that exceed their resource requests are evicted first, afterwards the pods are evicted sorted by pod priority, lastly by total resource usage relative to requests. 
-
-The third reason for mortality is api-initiated eviction. Someone initiated the eviction, these can effectively be removed via pod disruption budgets.
-
-The fourth reason is exceeding the configured memory limits. If a pod exceeds its memory limits it will get killed.
-
-The last reason are hardware failures, as said in the previous sections you cannot effectively guarantee that they will not occur. -->
-
-
-
-
-
-<!-- 
-Before we dive into more technical topics how we can configure a kubernetes cluster to be as reliable as possible let me first talk about an obvious yet sometimes unexpected topic: Choosing the correct tool. For most tasks multiple options exist, all with their specific benefit and drawbacks. When a decision must be made between these options you can factor in some important characteristics for being better suited for a long running environment.
-
-1. Choose a tool with built-in checkpoints:
-Built-in checkpointing and persistence to disk can make it way easier to recover from an unavoidable failure. While there are strategies to make programs without built-in checkpoints checkpointable (more on that later), it should only be treated as last resort and not the preferred way to make checkpoint of your program.
-
-2. Choose a tool with lower runtime. Sounds obvious but sometimes there are other factors that play into role here like the precision of the results etc. Always ask yourself: Is it really needed to have the highest precision ? Or does a more broader workflow with a little bit less precision but a drastically decreased runtime also work ?
-
-3. Prefer tools that use less RAM and or have a predictable RAM allocation. One of the hardest things to manage for ultra-long-running workloads is RAM. Especially if the RAM has some high spikes during the runtime it gets very frustrating and sometime not manageable in a cost and time effective way because crazy overprovisioning would be needed to cope with the RAM requirements. The fact is: RAM cannot be shared, so it is crucial to think about this in your considerations. The overall guideline should be: The less RAM usage and the more consistent the RAM usage the better. -->
+### Summary
