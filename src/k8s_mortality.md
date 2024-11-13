@@ -2,6 +2,13 @@
 
 ## Poster: Accepting mortality: Strategies for ultra-long running stateful workloads in K8s
 
+<p align=center>
+<a target="_blank" href="../assets/KubeCon_NA2024.png">
+<img width=800 src="../assets/KubeCon_NA2024.png" alt="Kubecon poster">
+</a>
+</p>
+
+
 ### Table of Contents
 
 1. [Introduction](#introduction)
