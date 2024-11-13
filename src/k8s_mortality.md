@@ -341,34 +341,33 @@ The remaining 10% of failures usually happen in two scenarios: assemblies that e
 
 ### Container Necromancy: CRIU to the Rescue
 
-When all other strategies fail, we have one more tool in our arsenal for ultra-long-running workloads: CRIU (Checkpoint/Restore in Userspace). Think of CRIU as a sort of "container time machine" - it can freeze a process in time, preserve its entire state, and bring it back to life later, exactly where it left off.
+If all other strategies don't work, we have one more tool for ultra-long-running workloads: CRIU (Checkpoint/Restore in Userspace). Think of CRIU as a kind of "container time machine" – it can freeze a process in time, save its entire state, and bring it back to life later, right where it left off.
 
 #### How CRIU Works
 
-The magic of CRIU lies in its ability to capture the complete state of a running process. This includes not just the memory contents, but everything the process needs to function: open file descriptors, network connections, and other system resources. It's like taking a perfect snapshot of a running program, down to the smallest detail.
+The beauty of CRIU is that it can capture the full state of a running process. This isn't just about the memory contents, but everything the process needs to function: open file descriptors, network connections, and other system resources. It's like taking a perfect snapshot of a running program, down to the smallest detail.
 
 #### Our Implementation Journey
 
-Our implementation was inspired by [crik](https://github.com/qawolf/crik), an innovative tool showcased at [KubeCon + CloudNativeCon EU 2024](https://www.youtube.com/watch?v=c2MbSM9-7Xs). While crik provided the foundational concepts, we expanded its capabilities to create an experimental checkpointing system:
-
-- Periodic Snapshots: Automated state preservation at configurable intervals while keeping the process running
-- Intelligent Restore Logic: Automatic detection and recovery from the latest valid checkpoint
+We were inspired by [crik](https://github.com/qawolf/crik), an innovative tool showcased at KubeCon + CloudNativeCon EU 2024. Crik gave us the building blocks, and we built on them to create an experimental checkpointing system. It has two main features:
+- Periodic Snapshots: These automate state preservation at configurable intervals while keeping the process running.
+- Intelligent Restore Logic: This automatically detects and recovers from the latest valid checkpoint.
 
 The result is a system that can recover long-running workloads from failures with minimal data loss and even allows pods to be modified in between.
 
 #### Understanding CRIU's Limitations and Challenges
 
-While CRIU offers powerful capabilities for process preservation and restoration, its integration into modern container ecosystems comes with significant complexities that teams need to carefully consider. The current state of container runtime support presents the first major hurdle. Although both CRI-O and containerd 2.0 have taken steps to incorporate CRIU functionality, the implementation remains somewhat fragmented. The lack of a standardized restore API across container runtimes means that teams often need to develop custom solutions, adding complexity to what might initially seem like a straightforward process.
+CRIU has some great features for keeping processes running smoothly, but it can be tricky to fit into the latest container systems. It's important to think carefully about how it will fit into your tech stack. The current state of container runtime support is the first big hurdle we need to get over. While CRI-O and containerd 2.0 have made some progress in incorporating CRIU functionality, the implementation is still a bit fragmented. As there's no standardised restore API across container runtimes, teams often need to develop custom solutions, which adds complexity to what might initially seem like a straightforward process.
 
-The technical challenges of CRIU extend far beyond basic runtime support. Process ID management, for instance, represents a particularly thorny issue. When restoring a process, CRIU must carefully reconstruct the entire process hierarchy while ensuring that PIDs align properly within the container's namespace. This becomes especially complex in containerized environments where multiple processes might be running simultaneously, each with its own set of child processes and threads that need to be preserved and restored correctly.
+The technical challenges of CRIU go way beyond just basic runtime support. One particularly tricky area is process ID management. When you're restoring a process, CRIU has to rebuild the whole process hierarchy and make sure that the PIDs line up correctly in the container namespace. This gets really tricky in containerised environments, where you might have lots of processes running at once, each with their own set of child processes and threads that need to be preserved and restored correctly.
 
-Terminal handling adds another layer of complexity to the CRIU puzzle. TTY restoration isn't simply a matter of reconnecting standard input and output streams—it involves preserving and reconstructing the entire terminal state, including window sizes, control settings, and any ongoing I/O operations. The challenge becomes even more pronounced when dealing with interactive applications or those that make heavy use of terminal capabilities.
+Terminal handling adds another layer of complexity to the CRIU puzzle. TTY restoration isn't just about reconnecting standard input and output streams – it's about preserving and reconstructing the entire terminal state, including window sizes, control settings, and any ongoing I/O operations. It gets even more challenging when you're dealing with interactive apps or ones that use the terminal a lot.
 
-Checkpoint consistency poses perhaps the most subtle yet critical challenge. When CRIU takes a snapshot, it must ensure that all in-flight operations are captured in a consistent state. This includes managing ongoing I/O operations, handling external resource dependencies, and ensuring that the checkpoint itself is atomic. Consider a scenario where a process is actively writing to a database during checkpoint—CRIU must carefully manage this to prevent data corruption or inconsistency when the process is restored.
+Checkpoint consistency is probably the trickiest challenge of all. When CRIU takes a snapshot, it's important to make sure that all the operations that are currently in progress are captured in a consistent state. This includes managing the I/O operations that are already in progress, handling any external resources that are needed, and making sure that the checkpoint itself is completely atomic. Imagine a situation where a process is actively writing to a database during a checkpoint. CRIU has to be really careful to make sure that the data is kept consistent and doesn't get corrupted when the process is restored.
 
-These limitations don't mean CRIU isn't valuable—quite the contrary. However, they do mean that teams need to approach CRIU implementation with careful planning and a clear understanding of the challenges involved. Much like performing delicate surgery, working with CRIU requires precision, expertise, and a thorough understanding of the underlying system architecture.operations.
+These limitations don't mean CRIU isn't useful – quite the opposite! However, this does mean that teams need to plan their CRIU implementation carefully and understand the challenges involved. It's like performing delicate surgery: you need precision, expertise and a thorough understanding of the underlying system architecture.
 
-We do recommend using CRIU only as a last resort, and suggest to prefer built-in persistence before thinking about integrating CRIU into your containers.
+We do recommend using CRIU only as a last resort and suggest using built-in persistence before integrating CRIU into your containers.
 
 ## Summary and Outlook
 
