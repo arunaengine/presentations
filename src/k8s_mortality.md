@@ -45,15 +45,15 @@ If we know what makes ultra-long running workloads tick, we can figure out why p
 
 ### Avoidable Failures: The Human Factor
 
-The larger category – and the one where we have the most control – involves avoidable failures. These stem from configuration issues, design oversights, or misalignment between tools and requirements. Common sources include:
+The bigger category – and the one where we have the most control – is avoidable failures. These usually come from problems with the way things are set up, design mistakes, or a mismatch between the tools we use and what we need them to do. Some of the most common sources are:
 
-- Preemption: Higher-priority pods can preempt lower-priority ones, leading to their termination.
-- API-Initiated Eviction: Kubernetes may evict pods based on API decisions, such as during scaling events or policy enforcement.
-- Misconfigured Resource Requests and Limits: Setting inappropriate resource allocations can lead to pod instability or inefficient resource usage.
-- Node Pressure: Resource exhaustion at the node level, such as CPU or memory shortages, can force the eviction of pods. Although this can become an unavoidable failure, it is often preventable through proper resource management.
-- Configuration issues on a workload level: A wrong parameters or malformed input data, can also cause failures during execution.
+- Preemption: If a higher-priority pod takes over, it can lead to the termination of a lower-priority one.
+- API-Initiated Eviction: Kubernetes might evict pods based on API decisions, like during scaling events or policy enforcement.
+- Misconfigured Resource Requests and Limits: If you set the wrong resource allocations, it can cause your pods to be unstable or use resources in an inefficient way.
+- Node Pressure: Resource exhaustion at the node level, such as CPU or memory shortages, can force the eviction of pods. While this can't always be avoided, it's often preventable with the right resource management.
+- Configuration issues at the workload level: Incorrect parameters or malformed input data can also cause failures during execution.
 
-Overall a proper planning, configuration, and implementation can prevent these failures. For ultra-long running workloads, addressing these avoidable failures can dramatically improve reliability and reduce the operational overhead of managing these critical computations.
+If you plan, configure and implement properly, you can avoid these failures. For ultra-long running workloads, addressing these avoidable failures can make your operations much more reliable and reduce the overhead of managing these critical computations.
 
 ### Unavoidable Failures: The Forces of Nature
 
