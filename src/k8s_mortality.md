@@ -22,7 +22,7 @@
 
 ["Pods are mortal"](https://kubernetes.io/docs/tutorials/kubernetes-basics/expose/expose-intro/) - this frequently cited credo from the Kubernetes documentation has long been used to argue against running stateful workloads on Kubernetes. The ephemeral nature of pods, while perfect for resilient microservices, was supposedly unsuitable for workloads that required persistence and long-term stability.
 
-But times have changed. Kubernetes has come a long way since it first started out focusing on stateless applications. These days, it's not just possible to run databases and other stateful workloads on K8s – [it's becoming the norm](https://dok.community/data-on-kubernetes-2022-report/). Thanks to redundant setups and reliable persistent volumes, the "mortality" of pods has gone from a limitation to a manageable design consideration.
+But times have changed. Kubernetes has come a long way since it first started out focusing on stateless applications. These days, it's not just possible to run databases and other stateful workloads on Kubernetes – [it's becoming the norm](https://dok.community/data-on-kubernetes-2022-report/). Thanks to redundant setups and reliable persistent volumes, the "mortality" of pods has gone from a limitation to a manageable design consideration.
 
 This change hasn't just affected traditional stateful services. In recent years, Kubernetes has emerged as a great alternative to traditional high-performance and high-throughput computing environments. Tools like Argo Workflows and Apache Airflow make it really easy to orchestrate compute jobs on Kubernetes. For many computational tasks, pod mortality is not a problem. If a job fails, it can simply be rescheduled.
 
