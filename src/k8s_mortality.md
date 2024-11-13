@@ -7,13 +7,18 @@
 1. [Introduction](#introduction)
 2. [What Makes a Workload "Ultra-Long Running"?](#what-makes-a-workload-ultra-long-running)
 3. [Understanding Pod Mortality: The Inevitable and the Preventable](#understanding-pod-mortality-the-inevitable-and-the-preventable)
-4. [Selecting the Right Tool](#selecting-the-right-tool)
-5. [Strategies for Kubernetes Configuration](#strategies-for-kubernetes-configuration)
-6. [A Practical Example](#a-practical-example)
-7. [Container Necromancy: CRIU to the Rescue!](#container-necromancy-criu-to-the-rescue)
-8. [Summary](#summary)
+   1. [Avoidable Failures: The Human Factor](#avoidable-failures-the-human-factor)
+   2. [Unavoidable Failures: The Forces of Nature](#unavoidable-failures-the-forces-of-nature)
+4. [Strategies for Success](#strategies-for-success)
+   1. [Selecting the Right Tool](#selecting-the-right-tool)
+   2. [Kubernetes Configuration Best Practices](#kubernetes-configuration-best-practices)
+   3. [Example in Practice](#example-in-practice)
+   4. [The Art of Pod Placement](#the-art-of-pod-placement)
+   5. [A Real-World Example: Computational Biology Workloads](#a-real-world-example-computational-biology-workloads)
+   6. [Container Necromancy: CRIU to the Rescue](#container-necromancy-criu-to-the-rescue)
+5. [Summary and Outlook](#summary-and-outlook)
 
-### Introduction
+## Introduction
 
 ["Pods are mortal"](https://kubernetes.io/docs/tutorials/kubernetes-basics/expose/expose-intro/) - this frequently cited credo from the Kubernetes documentation has long been used to argue against running stateful workloads on Kubernetes. The ephemeral nature of pods, while perfect for resilient microservices, was supposedly unsuitable for workloads that required persistence and long-term stability.
 
@@ -23,7 +28,7 @@ This evolution hasn't stopped at traditional stateful services. Recent years hav
 
 However, a new challenge emerges as organizations port legacy applications and intensive computations from traditional HPC systems to Kubernetes. These workloads, which we term "ultra-long running," can run for days or even weeks. At these timescales, the implications of pod mortality become far more severe, raising important questions about how we design for reliability at the extreme end of the runtime spectrum.
 
-### What Makes a Workload "Ultra-Long Running"?
+## What Makes a Workload "Ultra-Long Running"?
 Before diving deeper into the challenges and solutions, it's crucial to understand what we mean by "ultra-long running" workloads. The definition isn't as straightforward as setting a specific duration threshold – it's more nuanced and context-dependent.
 
 In practice, what constitutes an ultra-long running workload varies significantly across different domains and use cases. For teams typically dealing with computations that complete in seconds or minutes, a job running for several hours might qualify as ultra-long running. Conversely, in scientific computing or data analytics, where jobs commonly run for days, the threshold might be weeks or months.
@@ -32,11 +37,11 @@ A practical approach is to consider a workload ultra-long running when its durat
 
 This highlights that the classification of ultra-long running workloads depends not just on duration, but on a combination of runtime, resource investment, and business or scientific impact. When a computation represents weeks of progress, or when results are tied to critical decisions or deadlines, the stakes of pod mortality become significantly higher.
 
-### Understanding Pod Mortality: The Inevitable and the Preventable
+## Understanding Pod Mortality: The Inevitable and the Preventable
 
 With a clear understanding of ultra-long running workloads, we need to examine why pods die in the first place. Pod failures fall into two distinct categories: avoidable and unavoidable. Understanding this distinction is crucial for developing effective strategies to enhance reliability for these critical workloads.
 
-#### Avoidable Failures: The Human Factor
+### Avoidable Failures: The Human Factor
 
 The larger category – and the one where we have the most control – involves avoidable failures. These stem from configuration issues, design oversights, or misalignment between tools and requirements. Common sources include:
 
@@ -48,7 +53,7 @@ The larger category – and the one where we have the most control – involves 
 
 Overall a proper planning, configuration, and implementation can prevent these failures. For ultra-long running workloads, addressing these avoidable failures can dramatically improve reliability and reduce the operational overhead of managing these critical computations.
 
-#### Unavoidable Failures: The Forces of Nature
+### Unavoidable Failures: The Forces of Nature
 
 As already stated, unavoidable situations where a node faces critical resource pressure, leading to the eviction of pods, can happen.
 
@@ -318,15 +323,15 @@ podAntiAffinity:
 
 
 
-#### A Real-World Example: Computational Biology Workloads
+### A Real-World Example: Computational Biology Workloads
 
 Let's see how these principles apply in practice through a real-world example from computational biology. Our scenario involves DNA and RNA sequence analysis workflows, which present a perfect case study for mixed workload management.
 
-##### The Challenge
+#### The Challenge
 
 Working with metagenomic assemblies presents a unique set of challenges in Kubernetes. These processes can run for weeks or even months, demanding over 100 CPU cores and terabytes of RAM. What makes these workloads particularly interesting is their variable resource consumption pattern. During execution, CPU usage oscillates between intensive computation phases and lighter processing periods, while memory consumption can spike dramatically during certain stages. Adding to this complexity, these workflows often consist of long-running primary processes interwoven with shorter parallel tasks.
 
-##### Our Solution in Practice
+#### Our Solution in Practice
 
 Through careful application of our resource management strategies, we've developed a robust approach to handling these demanding workloads. We configure our long-running sequence assemblies with node anti-affinity rules and employ a tiered scheduling strategy. Critical assemblies are always scheduled on our high-memory nodes, while less critical ones start on regular nodes with the ability to migrate to high-memory nodes if they encounter out-of-memory events.
 
@@ -371,15 +376,15 @@ Before addressing more technical topics how we can configure a kubernetes cluste
 
 3. Prefer tools that use less RAM and or have a predictable RAM allocation. One of the hardest things to manage for ultra-long-running workloads is RAM. Especially if the RAM has some high spikes during the runtime it gets very frustrating and sometime not manageable in a cost and time effective way because crazy overprovisioning would be needed to cope with the RAM requirements. The fact is: RAM cannot be shared, so it is crucial to think about this in your considerations. The overall guideline should be: The less RAM usage and the more consistent the RAM usage the better. -->
 
-#### Container Necromancy: CRIU to the Rescue
+### Container Necromancy: CRIU to the Rescue
 
 When all other strategies fail, we have one more tool in our arsenal for ultra-long-running workloads: CRIU (Checkpoint/Restore in Userspace). Think of CRIU as a sort of "container time machine" - it can freeze a process in time, preserve its entire state, and bring it back to life later, exactly where it left off.
 
-##### How CRIU Works
+#### How CRIU Works
 
 The magic of CRIU lies in its ability to capture the complete state of a running process. This includes not just the memory contents, but everything the process needs to function: open file descriptors, network connections, and other system resources. It's like taking a perfect snapshot of a running program, down to the smallest detail.
 
-##### Our Implementation Journey
+#### Our Implementation Journey
 
 Our implementation was inspired by [crik](https://github.com/qawolf/crik), an innovative tool showcased at [KubeCon + CloudNativeCon EU 2024](https://www.youtube.com/watch?v=c2MbSM9-7Xs). While crik provided the foundational concepts, we expanded its capabilities to create an experimental checkpointing system:
 
@@ -388,7 +393,7 @@ Our implementation was inspired by [crik](https://github.com/qawolf/crik), an in
 
 The result is a system that can recover long-running workloads from failures with minimal data loss and even allows pods to be modified in between.
 
-##### Understanding CRIU's Limitations and Challenges
+#### Understanding CRIU's Limitations and Challenges
 
 While CRIU offers powerful capabilities for process preservation and restoration, its integration into modern container ecosystems comes with significant complexities that teams need to carefully consider. The current state of container runtime support presents the first major hurdle. Although both CRI-O and containerd 2.0 have taken steps to incorporate CRIU functionality, the implementation remains somewhat fragmented. The lack of a standardized restore API across container runtimes means that teams often need to develop custom solutions, adding complexity to what might initially seem like a straightforward process.
 
@@ -402,7 +407,7 @@ These limitations don't mean CRIU isn't valuable—quite the contrary. However, 
 
 We do recommend using CRIU only as a last resort, and suggest to prefer built-in persistence before thinking about integrating CRIU into your containers.
 
-### Summary and Outlook
+## Summary and Outlook
 
 The evolution of Kubernetes from a platform primarily focused on stateless microservices to one capable of handling ultra-long running workloads represents a significant shift in cloud-native computing. This article demonstrates that the often-cited limitation of pod mortality in Kubernetes isn't a roadblock but rather a design consideration that can be effectively managed through proper planning and implementation.
 
