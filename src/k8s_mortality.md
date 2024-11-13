@@ -41,7 +41,7 @@ This shows that how we classify ultra-long running workloads depends not just on
 
 ## Understanding Pod Mortality: The Inevitable and the Preventable
 
-With a clear understanding of ultra-long running workloads, we need to examine why pods die in the first place. Pod failures fall into two distinct categories: avoidable and unavoidable. Understanding this distinction is crucial for developing effective strategies to enhance reliability for these critical workloads.
+If we know what makes ultra-long running workloads tick, we can figure out why pods fail. There are two main types of pod failure: avoidable and unavoidable. Understanding this helps us come up with ways to make these critical workloads more reliable.
 
 ### Avoidable Failures: The Human Factor
 
