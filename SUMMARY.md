@@ -3,7 +3,7 @@
 [Introduction](README.md)
 
 # KubeCon + CloudNativeCon NA 2024: Pod Mortality in Kubernetes
-- [Introduction](./src/k8s_mortality.md#introduction)
+- [Introduction](./src/k8s_mortality.md)
 - [What Makes a Workload "Ultra-Long Running"?](./src/k8s_mortality.md#what-makes-a-workload-ultra-long-running)
 - [Understanding Pod Mortality: The Inevitable and the Preventable](./src/k8s_mortality.md#understanding-pod-mortality-the-inevitable-and-the-preventable)
   - [Avoidable Failures: The Human Factor](./src/k8s_mortality.md#avoidable-failures-the-human-factor)
