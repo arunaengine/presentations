@@ -57,16 +57,16 @@ If you plan, configure and implement properly, you can avoid these failures. For
 
 ### Unavoidable Failures: The Forces of Nature
 
-As already stated, unavoidable situations where a node faces critical resource pressure, leading to the eviction of pods, can happen.
+As we've already said, there are some situations where a node just can't handle the pressure on its resources, which leads to pods being evicted. The good news is that these issues can usually be avoided.
 
-But some pod failures are simply beyond our control – they're an inherent part of running distributed systems at scale. These failures include:
+But some pod failures are just out of our hands – they're part and parcel of running distributed systems at scale. These failures include:
 
 - Hardware Failures: From disk failures to memory errors, hardware issues can lead to pod termination.
 - Infrastructure Maintenance: Necessary system updates or hardware replacements can lead to temporary pod disruptions.
-- Network Partitions: Temporary or extended connectivity issues can isolate pods, leading to communication failures.
-- Power-Related Incidents: From brief outages to complete data center failures, power issues can abruptly terminate pod operations.
+- Network Partitions: If there are temporary or extended connectivity issues, this can isolate the pods, which can then lead to communication failures.
+- Power-Related Incidents: Anything from a short outage to a complete data centre failure can suddenly stop pod operations.
 
-While we can't prevent these failures, we can prepare for them. The key is not to fight their inevitability but to design systems that can gracefully handle such disruptions. This is particularly crucial for ultra-long running workloads, where each failure can mean days or weeks of lost computation.
+We can't stop these failures from happening, but we can get ready for them. The best thing to do is not try to stop them happening, but to design systems that can cope with them if they do. This is especially important for tasks that take a long time to complete, because each failure could mean days or weeks of lost work.
 
 ## Strategies for Success
 
