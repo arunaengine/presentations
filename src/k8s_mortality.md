@@ -20,7 +20,7 @@
 
 ## Introduction
 
-["Pods are mortal"](https://kubernetes.io/docs/tutorials/kubernetes-basics/expose/expose-intro/) - this frequently cited credo from the Kubernetes documentation has long been used to argue against running stateful workloads on Kubernetes. Pods are ephemeral, which is great for resilient microservices, but not so much for workloads that need to stick around and be stable over time.
+["Pods are mortal"](https://kubernetes.io/docs/tutorials/kubernetes-basics/expose/expose-intro/) - this frequently cited credo from the Kubernetes documentation has long been used to argue against running stateful workloads on Kubernetes. The ephemeral nature of pods, while perfect for resilient microservices, was supposedly unsuitable for workloads that required persistence and long-term stability.
 
 But times have changed. Kubernetes has come a long way since it first started out focusing on stateless applications. These days, it's not just possible to run databases and other stateful workloads on K8s – [it's becoming the norm](https://dok.community/data-on-kubernetes-2022-report/). Thanks to redundant setups and reliable persistent volumes, the "mortality" of pods has gone from a limitation to a manageable design consideration.
 
