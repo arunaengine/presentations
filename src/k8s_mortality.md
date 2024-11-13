@@ -44,16 +44,9 @@ The larger category – and the one where we have the most control – involves 
 - API-Initiated Eviction: Kubernetes may evict pods based on API decisions, such as during scaling events or policy enforcement.
 - Misconfigured Resource Requests and Limits: Setting inappropriate resource allocations can lead to pod instability or inefficient resource usage.
 - Node Pressure: Resource exhaustion at the node level, such as CPU or memory shortages, can force the eviction of pods. Although this can become an unavoidable failure, it is often preventable through proper resource management.
+- Configuration issues on a workload level: A wrong parameters or malformed input data, can also cause failures during execution.
 
 Overall a proper planning, configuration, and implementation can prevent these failures. For ultra-long running workloads, addressing these avoidable failures can dramatically improve reliability and reduce the operational overhead of managing these critical computations.
-
-<!-- - Misconfigured resource requests and limits
-- Inappropriate pod disruption budgets
-- Suboptimal node affinity rules
-- Inadequate liveness and readiness probe configurations
-- Poor handling of application state and checkpoints -->
-
-<!-- The good news is that these failures can be prevented through proper planning, configuration, and implementation. For ultra-long running workloads, addressing these avoidable failures can dramatically improve reliability and reduce the operational overhead of managing these critical computations. -->
 
 #### Unavoidable Failures: The Forces of Nature
 
@@ -66,13 +59,9 @@ But some pod failures are simply beyond our control – they're an inherent part
 - Network Partitions: Temporary or extended connectivity issues can isolate pods, leading to communication failures.
 - Power-Related Incidents: From brief outages to complete data center failures, power issues can abruptly terminate pod operations.
 
-<!-- - Hardware failures: From disk failures to memory errors
-- Infrastructure maintenance: Required system updates or hardware replacements
-- Network partitions: Temporary or extended connectivity issues
-- Power-related incidents: From brief outages to complete data center failures
-- System resource exhaustion: Host-level issues affecting all containers -->
-
 While we can't prevent these failures, we can prepare for them. The key is not to fight their inevitability but to design systems that can gracefully handle such disruptions. This is particularly crucial for ultra-long running workloads, where each failure can mean days or weeks of lost computation.
+
+## Strategies for Success
 
 ### Selecting the Right Tool
 
@@ -97,7 +86,247 @@ Choose tools that handle pod lifecycle events gracefully and support Kubernetes 
 
 While selecting the right tool is crucial, even the most suitable tool requires proper Kubernetes configuration to perform optimally. In the next strategy, we'll explore essential Kubernetes configurations that help minimize pod mortality and maximize reliability. We'll examine how to set up resource quotas, configure pod disruption budgets, and implement other critical settings that create a robust environment for ultra-long running workloads.
 
-### Strategies for Kubernetes Configuration
+### Kubernetes Configuration Best Practices
+
+Effective workload management in Kubernetes begins with strategic priority configuration. Through a well-designed priority system, you can safeguard critical workloads' resource availability while maintaining overall cluster health. While the [Kubernetes documentation](https://kubernetes.io/docs/concepts/scheduling-eviction/pod-priority-preemption/) provides comprehensive examples, here's a practical overview.
+
+#### Understanding PriorityClass
+PriorityClass is a cluster-wide resource that defines the importance of Pods relative to other Pods. This becomes crucial in two key scenarios:
+
+- Resource Contention: When the cluster is under pressure, Kubernetes uses priority to determine which Pods should be evicted first
+- Scheduling Decisions: Higher priority Pods get preferential treatment during scheduling
+
+Here's an example of a high-priority configuration:
+
+```yaml
+apiVersion: scheduling.k8s.io/v1
+kind: PriorityClass
+metadata:
+  name: high-priority
+value: 1000000
+globalDefault: false
+description: "High priority class for critical production workloads"
+preemptionPolicy: PreemptLowerPriority  # Optional: explicitly state preemption behavior
+```
+
+##### Key Fields Explained:
+
+- `value`: Determines the relative priority (higher numbers mean higher priority)
+- `globalDefault`: When true, automatically assigns this priority to Pods without a specified PriorityClass
+- `preemptionPolicy`: Controls whether Pods with this priority can preempt lower-priority Pods
+
+##### Implementing Priority in Workloads
+To associate a Pod with a PriorityClass, add the `priorityClassName` field to the Pod specification:
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: critical-app
+spec:
+  priorityClassName: high-priority
+  containers:
+  - name: app
+    image: your-app:latest
+```
+
+#### Managing Planned Disruptions with PodDisruptionBudgets
+
+While PriorityClasses handle unexpected resource constraints, [PodDisruptionBudgets (PDBs)](https://kubernetes.io/docs/tasks/run-application/configure-pdb/) help manage planned maintenance activities. PDBs ensure that a specified number of pods remain available. For long-running jobs where continuity is critical, you can configure strict protection like this:
+
+```yaml
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: no-disruption-allowed
+spec:
+  minAvailable: 100%
+  selector:
+    matchLabels:
+      app: critical-long-running-job
+```
+
+This will add a pod disruption budget to all pods that match a specific label.
+
+#### Configuring Resources and Requests
+
+Resource management in Kubernetes is often misunderstood. While many guides suggest setting both requests and limits for all resources, the reality is more nuanced. The key to effective resource management lies in understanding how different resources behave and how your workloads consume them. Let's dive into how you can make better decisions about resource configuration.
+
+#### The Foundation
+
+At its core, Kubernetes uses resource requests and limits to manage how pods consume cluster resources. Requests represent the guaranteed resources for a pod, while limits set the maximum. This system helps Kubernetes make intelligent scheduling decisions and determines the order of pod eviction when nodes are under pressure.
+
+#### A Tale of Two Resources
+
+CPU and memory behave fundamentally differently in Kubernetes, and treating them the same way can lead to suboptimal performance. Let's explore why.
+CPU is a compressible resource. When a container needs more CPU than is available, it simply has to wait. Think of it like a queue at a coffee shop – if there are more customers than baristas, people wait their turn. This means we can safely overprovision CPU without causing catastrophic failures. In fact, CPU throttling often causes more problems than it solves, which is why we recommend against setting CPU limits for most workloads.
+
+Memory, on the other hand, tells a different story. Unlike CPU, memory can't be compressed or throttled. When a container hits its memory limit, it's terminated – imagine a cup that overflows when it's too full. This abrupt behavior means we need to be especially thoughtful about how we handle memory limits.
+
+#### Quotas for Long Runners
+
+Resource quotas for Long-running workloads need to be treated with particular care. These are the marathon runners of your cluster – they need to maintain their pace over long periods and handle occasional sprints.
+For CPU, we've found that setting requests at 1.5 times the expected usage provides a comfortable buffer for traffic spikes. We intentionally omit CPU limits for these services. This might seem counterintuitive, but it actually improves overall performance by allowing services to use available CPU when they need it without artificial throttling.
+Memory configuration for long-runners follows a similar pattern. We set memory requests at 1.5 times the expected base usage, but here's the key insight: we don't set memory limits. This might make some administrators nervous, but it's a calculated decision. Long-running workloads often have complex memory patterns, and setting limits can lead to unexpected terminations that impact pod mortality.
+
+#### Short-Running Pods: The Sprinters
+
+Short-running pods and batch processes have different needs. These are your cluster's sprinters – they need resources for a brief, often predictable period. For these workloads, we can be more precise with CPU requests, matching them closely to expected usage. The workload's predictable nature means we can be more confident in our resource estimates.
+
+Memory configuration for short-running jobs takes an interesting approach. We actually set memory requests lower than we expect to need – about 80% of the expected usage. This intentional underprovision means these pods are more likely to be evicted when memory runs tight, which is exactly what we want for short-running jobs that can be rescheduled.
+
+We do set memory limits for these jobs, targeting a value that covers 90-95% of executions. This prevents runaway jobs while allowing for most normal variations in memory usage.
+
+### Example in Practice
+
+Consider this configuration for a long-running service:
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: long-runner
+spec:
+  containers:
+  - name: app
+    image: podimage
+    resources:
+      requests:
+        cpu: "1500m"      # 1.5x expected usage
+        memory: "1500Mi"  # 1.5x expected base memory
+```
+
+Notice the absence of limits – this is intentional. Now compare it to a short-running job:
+
+```yaml
+
+apiVersion: v1
+kind: Pod
+metadata:
+  name: short-runner
+spec:
+  containers:
+  - name: app
+    image: podimage
+    resources:
+      requests:
+        cpu: "500m"       # Matched to expected usage
+        memory: "400Mi"   # 80% of expected usage
+      limits:
+        memory: "512Mi"   # Covers 95% of executions
+```
+
+#### The Path Forward
+
+Effective resource management isn't a set-and-forget task. It requires ongoing monitoring and adjustment. Watch how your workloads behave, analyze their resource usage patterns, and adjust your configurations accordingly. Pay attention to pod eviction events and out-of-memory kills – they're valuable signals that your resource configuration might need tweaking.
+
+Remember that these guidelines are starting points, not hard rules. Your specific workloads might have different needs, and that's okay. The key is understanding the principles behind these decisions and applying them thoughtfully to your unique situation.
+
+By treating CPU and memory differently, and by distinguishing between long-running services and short-running jobs, you can create a more stable and efficient Kubernetes cluster that better serves your applications' needs.
+
+### The Art of Pod Placement
+
+While resource management controls how much of the cluster your workloads can consume, affinity rules control where these workloads run. These placement strategies are crucial for both performance and reliability. Let's explore how to use node affinity and pod anti-affinity to implement sophisticated scheduling strategies.
+
+#### Node Affinity: Choosing the Right Neighborhood
+
+Node affinity is like choosing the right neighborhood for your home. Sometimes you want to live near specific amenities, and sometimes you want to avoid certain areas altogether. In Kubernetes terms, this means selecting nodes with specific characteristics for your workloads.
+
+Consider a machine learning workload that requires GPU acceleration. Rather than hoping it lands on the right node, we can explicitly specify this requirement:
+
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: highmem-pod
+spec:
+  affinity:
+    nodeAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        nodeSelectorTerms:
+        - matchExpressions:
+          - key: mem-type
+            operator: In
+            values:
+            - highmem
+  containers:
+  - name: highmem-container
+    image: highmem-workload
+```
+
+But node affinity isn't just about hardware requirements. We often use it to ensure workloads land on nodes with specific characteristics. For instance, you might want to ensure your production workloads only run on nodes with premium storage or specific networking capabilities:
+
+```yaml
+nodeAffinity:
+  preferredDuringSchedulingIgnoredDuringExecution:
+  - weight: 100
+    preference:
+      matchExpressions:
+      - key: storage-type
+        operator: In
+        values:
+        - premium-ssd
+```
+
+Notice we used preferred instead of required here. This tells Kubernetes "try your best to place this pod on nodes with premium storage, but if you can't, that's okay." This flexibility can be crucial for maintaining service availability during cluster changes.
+
+#### Pod Anti-Affinity: Maintaining Safe Distances
+
+While node affinity helps us choose where to run our pods, pod anti-affinity helps us keep them apart. This is crucial for high availability – you don't want all instances of your critical service running on the same node.
+
+Think of pod anti-affinity like planning store locations: you generally don't want all your stores in the same neighborhood. Here's how we might configure a web service to spread across nodes:
+
+```yaml
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: long-runner
+spec:
+  replicas: 1
+  template:
+    spec:
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchExpressions:
+              - key: app
+                operator: In
+                values:
+                - long-runner
+            topologyKey: "kubernetes.io/hostname"
+```
+
+This configuration ensures that no two pods of our web-server will run on the same node. But sometimes this strict requirement can be counterproductive. For instance, during a rolling update or when scaling up rapidly, you might want to allow temporary co-location of pods. In such cases, we can use preferred anti-affinity:
+
+```yaml
+
+podAntiAffinity:
+  preferredDuringSchedulingIgnoredDuringExecution:
+  - weight: 100
+    podAffinityTerm:
+      labelSelector:
+        matchExpressions:
+        - key: app
+          operator: In
+          values:
+          - web-server
+      topologyKey: "kubernetes.io/hostname"
+```
+
+<!-- 
+Properly configured resource requests and limits are essential for cluster stability. Requests represent the guaranteed resources for a pod, while limits set the maximum. This helps Kubernetes make better scheduling decisions and has an effect on eviction order when NodePressure occurs.
+
+It is important to know that CPU and Memory are different topics. While overprovisioning CPU and using more CPU than available cores is possible. Exceeding the memory limits is a hard limit and the node will evict pods wenn overall memory runs low. This leads to some crucial design decisions for our long running pods and other shorter pods. We do not want to have a CPU resource limit. This often leads to unnecessary throttling and often results in an overall lower performance. In terms of CPU requests this depends on the workload. For the shorter running jobs we want to ideally choose the exact CPU we are expecting the workload to use. For our long runners that often have a significant variability we want to give them a 1.5x overprovision to buffer some CPU spikes.
+
+Memory on the otherhand is a different picture, exceeding memory limits will result in a pod kill. To prevent this kill option we do also not specify any limits for our long runners. For our short running pods we do want to have limits that ideally should cover 90-95% of all executions. 
+Requests are also a different story, we want our short running pods to exceed their memory requests on a regular basis. This gives them a higher chance of getting evicted when memory runs low. So in our tests we choose to give our long runners a 1.5x overprovision and our short runners a ~20% underprovision. 
+
+
+Resource management requires careful consideration. Set resource requests based on actual usage patterns, and think carefully about memory limits, especially for workloads prone to usage spikes. Node affinity rules ensure proper workload distribution across your cluster.
+Monitoring plays a vital role in preventing failures. Implement robust monitoring to detect potential issues before they cause disruption, and maintain proper redundancy and backup strategies. Distributing workloads across failure domains adds an extra layer of protection against infrastructure issues.
 
 Understanding pod mortality in Kubernetes requires a deep dive into the various mechanisms that can terminate a pod. While some terminations are intentional and controlled, others occur as emergency responses to system stress. Let's explore the core reasons for pod termination and how to mitigate them effectively.
 
@@ -121,7 +350,7 @@ The key to managing these various mortality factors lies in a comprehensive conf
 - Establishing node affinity rules to ensure proper workload distribution
 - Implementing robust monitoring to detect potential issues before they cause termination
 
-By understanding and accounting for these various termination scenarios, organizations can significantly improve the reliability of their ultra-long running workloads on Kubernetes. The goal isn't to eliminate pod mortality entirely – that's neither possible nor desirable in a distributed system. Instead, the focus should be on making pod terminations predictable, manageable, and minimally disruptive to critical computations.
+By understanding and accounting for these various termination scenarios, organizations can significantly improve the reliability of their ultra-long running workloads on Kubernetes. The goal isn't to eliminate pod mortality entirely – that's neither possible nor desirable in a distributed system. Instead, the focus should be on making pod terminations predictable, manageable, and minimally disruptive to critical computations. -->
 
 ### A practical example
 
@@ -158,17 +387,6 @@ Before addressing more technical topics how we can configure a kubernetes cluste
 2. Choose a tool with lower runtime. Sounds obvious but sometimes there are other factors that play into role here like the precision of the results etc. Always ask yourself: Is it really needed to have the highest precision ? Or does a more broader workflow with a little bit less precision but a drastically decreased runtime also work ?
 
 3. Prefer tools that use less RAM and or have a predictable RAM allocation. One of the hardest things to manage for ultra-long-running workloads is RAM. Especially if the RAM has some high spikes during the runtime it gets very frustrating and sometime not manageable in a cost and time effective way because crazy overprovisioning would be needed to cope with the RAM requirements. The fact is: RAM cannot be shared, so it is crucial to think about this in your considerations. The overall guideline should be: The less RAM usage and the more consistent the RAM usage the better.
-
-
-### TODO:
-
-- Node affinity
-- Pod priority
-- Argo workflows ?
-- Exotic strategies:
-- - CRIU
-- - VMs / Kata containers ?
-
 
 ### Container Necromancy: CRIU to the Rescue
 
