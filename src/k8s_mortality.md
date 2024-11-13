@@ -325,56 +325,19 @@ podAntiAffinity:
 
 ### A Real-World Example: Computational Biology Workloads
 
-Let's see how these principles apply in practice through a real-world example from computational biology. Our scenario involves DNA and RNA sequence analysis workflows, which present a perfect case study for mixed workload management.
+Let's look at how these principles play out in the real world, using computational biology as a case study. Our scenario is DNA and RNA sequence analysis, which is a great example of mixed workload management.
 
 #### The Challenge
 
-Working with metagenomic assemblies presents a unique set of challenges in Kubernetes. These processes can run for weeks or even months, demanding over 100 CPU cores and terabytes of RAM. What makes these workloads particularly interesting is their variable resource consumption pattern. During execution, CPU usage oscillates between intensive computation phases and lighter processing periods, while memory consumption can spike dramatically during certain stages. Adding to this complexity, these workflows often consist of long-running primary processes interwoven with shorter parallel tasks.
+Dealing with metagenomic assemblies in Kubernetes brings a whole new set of challenges. These processes can run for weeks or even months, using over 100 CPU cores and terabytes of RAM. What makes these workloads particularly interesting is that they use resources in different ways at different times. During execution, CPU usage changes a lot between intensive computation phases and lighter processing periods, while memory consumption can go up a lot during certain stages. Adding to this complexity, these workflows often consist of long-running primary processes interwoven with shorter parallel tasks.
 
 #### Our Solution in Practice
 
-Through careful application of our resource management strategies, we've developed a robust approach to handling these demanding workloads. We configure our long-running sequence assemblies with node anti-affinity rules and employ a tiered scheduling strategy. Critical assemblies are always scheduled on our high-memory nodes, while less critical ones start on regular nodes with the ability to migrate to high-memory nodes if they encounter out-of-memory events.
+Thanks to our careful application of resource management strategies, we've developed a robust approach to handling these demanding workloads. We set up our long-running sequence assemblies with node anti-affinity rules and use a tiered scheduling strategy. We always schedule critical assemblies on our high-memory nodes, while less critical ones start on regular nodes and can migrate to high-memory nodes if they encounter out-of-memory events.
 
-The real success story lies in the numbers. By implementing a comprehensive strategy that combines pod priorities, PodDisruptionBudgets (PDBs), resource quotas, and strategic node placement, we've achieved a dramatic improvement in workflow reliability. Our long-running sequence assemblies have gone from a mere 40% success rate to over 90% - a transformation that has significantly improved our research capabilities.
+The proof is in the numbers. By putting a comprehensive strategy in place that combines pod priorities, PodDisruptionBudgets (PDBs), resource quotas and strategic node placement, we've seen a big improvement in workflow reliability. Our long-running sequence assemblies have gone from a mere 40% success rate to over 90% – a huge improvement that has really boosted our research capabilities.
 
-The remaining 10% of failures typically occur in two scenarios: assemblies that exceed even our high-memory node capacities, or unavoidable hardware failures. To push our success rate even higher, we've begun experimenting with Checkpoint/Restore In Userspace (CRIU) technology.
-
-
-<!-- ### A Practical Example
-
-#### Our workload(s)
-In our setup we are running a diverse set of workflows from computational biology. These include primarily the analysis and processing of DNA and RNA sequences from various sources. Most of these workflows consist of a combination of long-running steps and (sometimes in parallel) shorter running steps in between. Our goal is to make the most efficient use of the available hardware while maximizing the success rate of our long running workloads. Some of these applications, large metagenomic assemblies for example can take weeks or months to complete on high performance hardware using 100+ CPU cores and up-to terabytes of RAM.
-
-It is important to note that these assembly jobs do not always use the full resources and often have long spans that take either a lot of CPU resources or Memory.
-
-#### Workload configuration: Request and Limits
-
-Through extensive measurement we have a quite good estimate of the average and minimum / maximum resource usage of small and large jobs. As a baseline we configure all workloads to use the average CPU / RAM as requests, due to the memory spikes we do give our ultra-long-running pods around 1.5x memory above average to decrease the likelihood of eviction when MemoryPressure occurs.
-
-The long-running workloads have no resource limits. CPU limits do have a significant runtime impact. Memory limits while in theory possible we do want to give these jobs the option to consume almost all memory of the node. All shorter / smaller jobs do not have limits.
-
-Before we dive into specific strategies let us first explore the knobs and dials someone can turn to modify the default pod behavior. Five reasons exist why a pod in your kubernetes environment can get killed: Preemption, Node pressure eviction, API-initiated Eviction, Exceeding resource limits and external factors (hardware failures, external sigkill signals etc.).
-
-Preemption is the selective eviction of pods by the kubernetes scheduler to make room for pods with a higher priority, thus a very low hanging fruit is assigning your long running jobs a high priority. This can be done via priority classes.
-
-Node pressure eviction occurs when kubelet detects some resource exhaustion on the hardware level, these eviction signals can be memory (MemoryPressure), file system related (DiskPressure) or pid related (PIDPressure). It is important to note that kubelet does not respect your configured PodDisruptionBudget and will kill your pod to remove the exhaustion state.
-
-Pod selection at eviction: The pods that exceed their resource requests are evicted first, afterwards the pods are evicted sorted by pod priority, lastly by total resource usage relative to requests.
-
-The third reason for mortality is api-initiated eviction. Someone initiated the eviction, these can effectively be removed via pod disruption budgets.
-
-The fourth reason is exceeding the configured memory limits. If a pod exceeds its memory limits it will get killed.
-
-The last reason are hardware failures, as said in the previous sections you cannot effectively guarantee that they will not occur.
-
-Before addressing more technical topics how we can configure a kubernetes cluster to be as reliable as possible let me first talk about an obvious yet sometimes unexpected topic: Choosing the correct tool. For most tasks multiple options exist, all with their specific benefit and drawbacks. When a decision must be made between these options you can factor in some important characteristics for being better suited for a long running environment.
-
-1. Choose a tool with built-in checkpoints:
-   Built-in checkpointing and persistence to disk can make it way easier to recover from an unavoidable failure. While there are strategies to make programs without built-in checkpoints checkpointable (more on that later), it should only be treated as last resort and not the preferred way to make checkpoint of your program.
-
-2. Choose a tool with lower runtime. Sounds obvious but sometimes there are other factors that play into role here like the precision of the results etc. Always ask yourself: Is it really needed to have the highest precision ? Or does a more broader workflow with a little bit less precision but a drastically decreased runtime also work ?
-
-3. Prefer tools that use less RAM and or have a predictable RAM allocation. One of the hardest things to manage for ultra-long-running workloads is RAM. Especially if the RAM has some high spikes during the runtime it gets very frustrating and sometime not manageable in a cost and time effective way because crazy overprovisioning would be needed to cope with the RAM requirements. The fact is: RAM cannot be shared, so it is crucial to think about this in your considerations. The overall guideline should be: The less RAM usage and the more consistent the RAM usage the better. -->
+The remaining 10% of failures usually happen in two scenarios: assemblies that exceed even our high-memory node capacities, or unavoidable hardware failures. To push our success rate even higher, we've started experimenting with Checkpoint/Restore In Userspace (CRIU) technology.
 
 ### Container Necromancy: CRIU to the Rescue
 
