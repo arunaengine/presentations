@@ -30,13 +30,14 @@ However, a new challenge has emerged as organisations move legacy applications a
 
 
 ## What Makes a Workload "Ultra-Long Running"?
-Before diving deeper into the challenges and solutions, it's crucial to understand what we mean by "ultra-long running" workloads. The definition isn't as straightforward as setting a specific duration threshold – it's more nuanced and context-dependent.
 
-In practice, what constitutes an ultra-long running workload varies significantly across different domains and use cases. For teams typically dealing with computations that complete in seconds or minutes, a job running for several hours might qualify as ultra-long running. Conversely, in scientific computing or data analytics, where jobs commonly run for days, the threshold might be weeks or months.
+Before diving deeper into the challenges and solutions, it's important to understand what we mean by "ultra-long running" workloads. It's not as simple as just setting a specific time limit. It's more about understanding the nuances and context.
 
-A practical approach is to consider a workload ultra-long running when its duration exceeds typical workloads in your environment by one to two orders of magnitude. However, runtime isn't the only factor. The criticality and impact of failure must also be considered. Take, for example, a medical imaging analysis job processing a cancer patient's data – even if it runs for just a few days, its importance and the inability to delay results might also be an important factor where mortality becomes a critical problem. 
+In reality, what counts as an ultra-long running workload can vary a lot depending on the situation. For teams that usually deal with computations that complete in seconds or minutes, a job running for several hours might count as ultra-long running. On the other hand, in scientific computing or data analytics, where jobs often run for days, the threshold might be weeks or months.
 
-This highlights that the classification of ultra-long running workloads depends not just on duration, but on a combination of runtime, resource investment, and business or scientific impact. When a computation represents weeks of progress, or when results are tied to critical decisions or deadlines, the stakes of pod mortality become significantly higher.
+A good rule of thumb is to think of a workload as ultra-long running if it lasts longer than typical workloads in your environment by one to two orders of magnitude. But there's more to it than just runtime. We also need to think about how critical the task is and what would happen if it failed. Take a medical imaging analysis job processing a cancer patient's data, for example. Even if it runs for just a few days, its importance and the inability to delay results might also be an important factor where mortality becomes a critical problem.
+
+This shows that how we classify ultra-long running workloads depends not just on how long they take, but also on how long they run for, how much resource they use, and how important they are to the business or science. When a computation takes weeks to complete, or when the results are tied to critical decisions or deadlines, the consequences of pod failure become much more serious.
 
 ## Understanding Pod Mortality: The Inevitable and the Preventable
 
