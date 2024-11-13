@@ -85,7 +85,7 @@ A good state management system should automatically save the program's current s
 When we're looking at workloads that extend over days or even weeks, it's really important to make sure we're being as efficient as we can with our resources. Memory management is especially important because RAM constraints and out-of-memory events often cause pod failures in Kubernetes. Tools that don't play by the rules in terms of memory usage or have sudden spikes in demand can cause big problems. Teams often have to overprovision resources as a precaution.  The best solution should show consistent resource use and support configurable internal memory limits that respect defined limits.
 
 Think about how useful a tool is in practice. If it gets the job done in three days with a steady amount of resources, it's probably more valuable than one that promises to be faster but uses more resources in a random way.
-If you can change how long it takes to do a task, look for tools that let you switch between being precise and being fast. This way, you can find a balance that works for you. Shorter runtimes are good, but only if they use the same amount of resources and work well over time.
+If you can change how long it takes to do a task, look for tools that let you switch between being precise and being fast. This way, you can find a balance that works for you. Shorter runtimes are good, but only if they have a similar resource consumption profile and work well over time.
 
 #### Kubernetes Integration
 
