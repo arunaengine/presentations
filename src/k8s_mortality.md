@@ -1,3 +1,11 @@
+<head>
+<meta property="og:title" content="Accepting mortality: Strategies for ultra-long running stateful workloads in K8s" />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://info.aruna-engine.org/src/k8s_mortality.html" />
+<meta property="og:image" content="https://info.aruna-engine.org/assets/KubeCon_NA2024.png" />
+</head>
+
+
 # KubeCon + CloudNativeCon NA 2024
 
 ## Poster: Accepting mortality: Strategies for ultra-long running stateful workloads in K8s
