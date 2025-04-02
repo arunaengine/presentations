@@ -11,7 +11,6 @@
 - [Strategies for Success](./src/k8s_mortality_strategies.md)
   - [Selecting the Right Tool](./src/k8s_mortality_tool_selection.md)
   - [Kubernetes Configuration Best Practices](./src/k8s_mortality_kubernetes.md)
-  - [Example in Practice](./src/k8s_mortality_example.md)
   - [The Art of Pod Placement](./src/k8s_mortality_pod_placement.md)
   - [A Real-World Example: Computational Biology Workloads](./src/k8s_mortality_example.md)
   - [Container Necromancy: CRIU to the Rescue](./src/k8s_mortality_necromancy.md)
