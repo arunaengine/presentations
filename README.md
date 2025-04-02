@@ -10,7 +10,7 @@ If you are looking for technical documentation for aruna itself please click [he
 
 
 > [!NOTE]
-> [Click to see our latest KubeCon + CloudNativeCon write-up about pod mortality](./src/k8s_mortality.md)
+> [Click to see our latest project for KubeCon + CloudNativeCon: KubeDAL](https://github.com/arunaengine/kubedal)
 
 A rendered version of this repo can be found here: 
 
